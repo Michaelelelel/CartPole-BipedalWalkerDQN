@@ -1,0 +1,16 @@
+rank,run_name,policy,network_type,learning_rate,gamma,total_epochs,buffer_size,batch_size,warmup_steps,explore_start,explore_end,seed,num_envs,steps_per_epoch,updates_per_epoch,target_sync_interval,episodes,return_mean,return_std,return_median,return_best,length_mean
+1,bw_boltzmann_final_01,boltzmann,mlp_large,0.00005,0.99,500,500000,256,50000,2.0,0.2,42,8,100,500,10,50,329.2,52.0,321.3,513.2,143.4
+2,bw_final_02_balanced_replay_explore_400_seed42,epsilon_greedy,mlp_large,0.00005,0.99,400,500000,256,50000,2.0,0.1,42,8,100,500,10,50,243.0,50.8,225.4,413.0,132.0
+3,bw_03_more_exploration_large_300,epsilon_greedy,mlp_large,0.0003,0.99,300,100000,128,15000,1.0,0.1,1,8,500,1000,20,50,163.7,12.6,164.6,189.3,89.5
+4,bw_boltzmann_04_more_exploration_temp010_300,boltzmann,mlp_large,0.00025,0.99,300,200000,256,20000,2.5,0.1,24,8,500,1200,20,50,160.6,15.0,159.1,195.7,89.0
+5,bw_01_baseline_large_300,epsilon_greedy,mlp_large,0.0003,0.99,300,100000,128,10000,1.0,0.05,1,8,500,1000,20,50,158.6,16.8,155.0,203.4,89.1
+6,bw_05_big_replay_batch_300,epsilon_greedy,mlp_large,0.0003,0.99,300,200000,256,10000,1.0,0.05,1,8,500,1200,20,50,152.7,11.0,156.6,178.7,85.1
+7,bw_final_03_compromise_explore_long_500,epsilon_greedy,mlp_large,0.0003,0.99,500,150000,128,15000,1.0,0.075,13,8,500,1200,20,50,153.1,14.8,156.7,195.9,78.4
+8,bw_boltzmann_03_fast_lr_temp015_300,boltzmann,mlp_large,0.0003,0.99,300,150000,128,15000,2.0,0.15,23,8,500,1200,20,50,146.6,7.3,146.0,163.7,85.6
+9,bw_06_boltzmann_large_300,boltzmann,mlp_large,0.0003,0.99,300,100000,128,10000,1.5,0.2,1,8,500,1000,20,50,145.1,12.9,141.4,183.7,83.4
+10,bw_02_stable_low_lr_large_300,epsilon_greedy,mlp_large,0.0001,0.99,300,100000,128,10000,1.0,0.05,1,8,500,1000,20,50,141.3,13.8,139.8,174.9,82.7
+11,bw_final_01_more_exploration_extended_400,epsilon_greedy,mlp_large,0.0003,0.99,400,100000,128,15000,1.0,0.1,11,8,500,1000,20,50,134.2,14.5,130.1,175.9,76.6
+12,bw_04_medium_network_300,epsilon_greedy,mlp_medium,0.0003,0.99,300,100000,128,10000,1.0,0.05,1,8,500,1000,20,50,132.8,9.4,132.7,158.9,74.4
+13,bw_boltzmann_02_gamma995_temp015_250,boltzmann,mlp_large,0.00025,0.995,250,200000,256,20000,2.0,0.15,21,8,500,1200,20,50,130.5,30.0,132.2,182.7,82.5
+14,bw_boltzmann_01_temp15_temp015_250,boltzmann,mlp_large,0.00025,0.99,250,200000,256,20000,1.5,0.15,22,8,500,1200,20,50,117.1,19.7,111.1,164.0,79.4
+15,bw_07_gamma_097_ablation_300,epsilon_greedy,mlp_large,0.0003,0.97,300,100000,128,10000,1.0,0.05,1,8,500,1000,20,50,93.4,34.0,78.7,173.8,70.4

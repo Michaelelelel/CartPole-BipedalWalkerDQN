@@ -1,0 +1,19 @@
+{
+  "network_type": "mlp_medium",
+  "policy": "epsilon_greedy",
+  "device": "cpu",
+  "total_epochs": 200,
+  "gamma": 0.99,
+  "seed": 42,
+  "num_envs": 4,
+  "learning_rate": 0.001,
+  "steps_per_epoch": 100,
+  "buffer_size": 10000,
+  "updates_per_epoch": 200,
+  "batch_size": 64,
+  "warmup_steps": 1000,
+  "target_sync_interval": 1,
+  "explore_start": 0.5,
+  "explore_end": 0.05,
+  "run_name": "cp_arch_medium"
+}

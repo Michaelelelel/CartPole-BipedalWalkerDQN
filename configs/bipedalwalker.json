@@ -1,0 +1,18 @@
+{
+  "network_type": "mlp_large",
+  "policy": "epsilon_greedy",
+  "device": "cpu",
+  "total_epochs": 300,
+  "gamma": 0.99,
+  "seed": null,
+  "num_envs": 8,
+  "learning_rate": 0.0003,
+  "steps_per_epoch": 500,
+  "buffer_size": 100000,
+  "updates_per_epoch": 1000,
+  "batch_size": 128,
+  "warmup_steps": 10000,
+  "target_sync_interval": 20,
+  "explore_start": 1.0,
+  "explore_end": 0.05
+}

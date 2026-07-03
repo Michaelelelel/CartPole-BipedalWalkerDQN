@@ -1,0 +1,53 @@
+\section{Introduction}
+The Bipedal Walker environment is a classical reinforcement learning benchmark in which a simulated two-legged robot must learn to walk forward on a 2D terrain using continuous control. The system is part of the Box2D physics suite in Gymnasium (formerly OpenAI Gym) and can be used to evaluate locomotion policies under Newtonian mechanics, partial observability, and contact-rich interactions.
+
+\subsection{Agent}
+The agent is a four-joint bipedal robot consisting of a single rigid torso (“hull”) and two legs, each with two actuated joints (hip and knee). The policy controls joint motors that (in general) apply continuous motor speeds in the range $[-1, 1]$ for each of the four actuators (joints). Though specific control architectures like DQN, as we will see later, are only capable of applying a discrete subset of aformentioned motor ranges.
+
+The agent’s observation vector is 24-dimensional and includes:
+\begin{itemize}
+    \item Hull angle, angular velocity, and linear velocities (x and y directions)
+    \item Joint angles and angular velocities for both legs
+    \item Binary contact sensors indicating whether legs touch the ground
+    \item 10 lidar range measurements providing local terrain awareness
+\end{itemize}
+
+The non-discretized action space is:
+\[
+\mathcal{A} = [-1,1]^4
+\]
+
+The observation space is:
+\[
+\mathcal{O} \in \mathbb{R}^{24}
+\]
+
+The agent does not receive explicit global position coordinates, making the task partially observable.
+
+\subsection{Environment}
+The topology in its simplest form is a plain, obstacle-free, horizontal ground slab in 2D space, subject to Newtonian mechanics and gravity. The physics are simulated using Box2D and include, momenta, gravity, frictional contact dynamics between feet and terrain.
+
+The environment provides two variants:
+\begin{itemize}
+    \item \textbf{Normal}: slightly uneven terrain
+    \item \textbf{Hardcore}: includes stumps, pits, and ladders requiring more advanced locomotion strategies
+\end{itemize}
+
+Each episode typically runs up to 1600 steps (normal) or 2000 steps (hardcore).
+
+\subsection{Goal}
+The goal is to make the agent walk forward along the terrain as far as possible without falling.
+
+More formally, the objective is to maximize cumulative reward:
+\begin{itemize}
+    \item Positive reward for forward displacement along the x-axis
+    \item Large penalty (approximately -100) for falling
+    \item Small penalties for applying motor torque (energy cost)
+\end{itemize}
+
+An episode terminates when:
+\begin{itemize}
+    \item The robot falls (torso contacts ground), or
+    \item The end of the terrain is reached, or
+    \item (The time limit is exceeded)
+\end{itemize}

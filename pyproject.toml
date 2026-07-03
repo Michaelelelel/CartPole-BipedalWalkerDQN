@@ -1,0 +1,37 @@
+# Defines cross-platform project metadata, dependencies, and tool configuration.
+[project]
+name = "cartpoleandbipedalwalkerdqn"
+version = "0.1.0"
+description = "Unified DQN agent framework to solve CartPole-v1 and BipedalWalker-v3"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "gymnasium[classic-control]>=1.3.0",
+    "gymnasium[box2d]>=1.3.0",
+    "imageio[ffmpeg]>=2.37.3",
+    "mlflow>=3.12.0",
+    "numpy<2.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "torch>=2.2.0,<3.0.0",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+]

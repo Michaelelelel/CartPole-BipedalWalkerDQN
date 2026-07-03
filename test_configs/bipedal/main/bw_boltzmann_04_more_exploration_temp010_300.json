@@ -1,0 +1,19 @@
+{
+  "network_type": "mlp_large",
+  "policy": "boltzmann",
+  "device": "cuda",
+  "total_epochs": 300,
+  "gamma": 0.99,
+  "seed": 24,
+  "num_envs": 8,
+  "learning_rate": 0.00025,
+  "steps_per_epoch": 500,
+  "buffer_size": 200000,
+  "updates_per_epoch": 1200,
+  "batch_size": 256,
+  "warmup_steps": 20000,
+  "target_sync_interval": 20,
+  "explore_start": 2.5,
+  "explore_end": 0.1,
+  "run_name": "bw_boltzmann_04_more_exploration_temp010_300"
+}

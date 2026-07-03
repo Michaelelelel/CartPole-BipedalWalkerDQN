@@ -1,0 +1,32 @@
+# --- Python ---
+.venv/
+venv/
+env.bak/
+venv.bak/
+/ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.Python
+
+# --- IDE ---
+.idea/
+.vscode/
+
+# --- ML experiment tracking ---
+mlruns/
+mlflow.db
+
+# --- Generated outputs (training artifacts) ---
+# Trained model weights, plots, and videos are generated outputs.
+# They should NOT be committed to git — use MLflow or object storage instead.
+results/*/artifacts/
+results/*/plots/
+results/*/videos/
+
+# --- Scratch / temporary ---
+tmp/
+logs/
+runs/
