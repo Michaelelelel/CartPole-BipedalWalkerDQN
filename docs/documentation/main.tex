@@ -1,31 +1,141 @@
-\newlength{\bibsep}
-\documentclass[nonatbib,5p,a4paper]{elsarticle}
-\usepackage[ngerman]{babel}
-\usepackage[DatePublished]{sty/style}        
-\usepackage{csquotes}     
-\usepackage{pgfplots}
-\usepackage{parskip}
-\usepackage{amsthm}
-\usepackage{svg}
-\newtheorem{definition}{Definition}
-\usepgfplotslibrary{external} 
-\tikzexternalize[prefix=tikz/]
+\documentclass{article}
 
-\addbibresource{bib/Sources.bib}        
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2026
+
+% The authors should use one of these tracks.
+% Before accepting by the NeurIPS conference, select one of the options below.
+% 0. "default" for submission
+\usepackage[main, final]{sty/neurips_2026}
+% the "default" option is equal to the "main" option, which is used for the Main Track with double-blind reviewing.
+% 1. "main" option is used for the Main Track
+%  \usepackage[main]{neurips_2026}
+% 2. "position" option is used for the Position Paper Track
+%  \usepackage[position]{neurips_2026}
+% 3. "eandd" option is used for the Evaluations & Datasets Track
+ % \usepackage[eandd]{neurips_2026}
+% 4. "creativeai" option is used for the Creative AI Track
+%  \usepackage[creativeai]{neurips_2026}
+% 5. "sglblindworkshop" option is used for the Workshop with single-blind reviewing
+ % \usepackage[sglblindworkshop]{neurips_2026}
+% 6. "dblblindworkshop" option is used for the Workshop with double-blind reviewing
+%  \usepackage[dblblindworkshop]{neurips_2026}
+% 7. "education" option is used for the Education Track
+%  \usepackage[education]{neurips_2026}
+
+
+% After being accepted, the authors should add "final" behind the track to compile a camera-ready version.
+% 1. Main Track
+ % \usepackage[main, final]{neurips_2026}
+% 2. Position Paper Track
+%  \usepackage[position, final]{neurips_2026}
+% 3. Evaluations & Datasets Track
+ % \usepackage[eandd, final]{neurips_2026}
+% 4. Creative AI Track
+%  \usepackage[creativeai, final]{neurips_2026}
+% 5. Workshop with single-blind reviewing
+%  \usepackage[sglblindworkshop, final]{neurips_2026}
+% 6. Workshop with double-blind reviewing
+%  \usepackage[dblblindworkshop, final]{neurips_2026}
+% Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote.
+% For workshops (5., 6.), the authors should add the name of the workshop, "\workshoptitle" command is used to set the workshop title.
+% \workshoptitle{WORKSHOP TITLE}
+% 7. Education Track
+% \usepackage[education, final]{neurips_2026}
+
+% "preprint" option is used for arXiv or other preprint submissions
+ % \usepackage[preprint]{neurips_2026}
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2026}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{svg}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{tabularx}
+
+% Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
+\title{Deep Reinforcement Learning: Bipedal Walker \& Cart Pole with DQN}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{%
+  Dominik Rzecki \\
+  Technische Universität Wien \\
+  \texttt{e12410100@student.tuwien.ac.at} \\
+  \And
+  Lea Seifried \\
+  Technische Universität Wien \\
+  \texttt{e12428595@student.tuwien.ac.at} \\
+  \And
+  Michael Hagmann \\
+  Technische Universität Wien \\
+  \texttt{e12426877@student.tuwien.ac.at} \\
+}
 
 
 \begin{document}
-\selectlanguage{english}                         
 
-\input{tex/0-frontmatter}
-\tableofcontents
-\pgfplotsset{compat=1.18}
+
+\maketitle
+
+
+\begin{abstract}
+  A DQN architecture capable of solving problems from Gymnasium (formerly OpenAI Gym) has been been devised, trained and evaluated.
+  Specifically, it was evaluated on two problems, BipedalWalker and CartPole. 
+
+\end{abstract}
+
 \input{tex/1-Introduction.tex}
 \input{tex/2-Theory.tex}
 \input{tex/3-Implementation.tex}
 \input{tex/4-TrainingResults.tex}
+
+\clearpage
+\appendix
 \input{tex/5-Appendix.tex}
 
-\printbibliography[heading=bibintoc,title={Literaturverzeichnis}]
+\section*{References}
+\medskip
+
+{
+\small
+
+[1] Mnih, V., Kavukcuoglu, K., Silver, D. et al.\ (2015) Human-level control through deep reinforcement learning. {\it Nature} {\bf 518}, 529--533.
+
+[2] van Hasselt, H., Guez, A.\ \& Silver, D.\ (2016) Deep Reinforcement Learning with Double Q-Learning. In {\it Proceedings of the AAAI Conference on Artificial Intelligence (AAAI-16)}.
+
+[3] Towers, M., Kwiatkowski, A., Terry, J.\ et al.\ (2024) Gymnasium: A Standard Interface for Reinforcement Learning Environments. Farama Foundation. \url{https://gymnasium.farama.org/}
+
+[4] Vizuara (2024) The FASTEST Introduction to Reinforcement Learning on the Internet. YouTube. \url{https://www.youtube.com/watch?v=VnpRp7ZglfA}
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\input{sty/checklist.tex}
+
 
 \end{document}

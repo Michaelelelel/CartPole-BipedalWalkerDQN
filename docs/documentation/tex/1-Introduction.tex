@@ -1,7 +1,13 @@
 \section{Introduction}
+
+A DQN architecture for the following problems was developed, trained and evaluated:
+
+\subsection{BipedalWalker}
+
 The Bipedal Walker environment is a classical reinforcement learning benchmark in which a simulated two-legged robot must learn to walk forward on a 2D terrain using continuous control. The system is part of the Box2D physics suite in Gymnasium (formerly OpenAI Gym) and can be used to evaluate locomotion policies under Newtonian mechanics, partial observability, and contact-rich interactions.
 
-\subsection{Agent}
+\subsubsection{Agent}
+
 The agent is a four-joint bipedal robot consisting of a single rigid torso (“hull”) and two legs, each with two actuated joints (hip and knee). The policy controls joint motors that (in general) apply continuous motor speeds in the range $[-1, 1]$ for each of the four actuators (joints). Though specific control architectures like DQN, as we will see later, are only capable of applying a discrete subset of aformentioned motor ranges.
 
 The agent’s observation vector is 24-dimensional and includes:
@@ -24,7 +30,7 @@ The observation space is:
 
 The agent does not receive explicit global position coordinates, making the task partially observable.
 
-\subsection{Environment}
+\subsubsection{Environment}
 The topology in its simplest form is a plain, obstacle-free, horizontal ground slab in 2D space, subject to Newtonian mechanics and gravity. The physics are simulated using Box2D and include, momenta, gravity, frictional contact dynamics between feet and terrain.
 
 The environment provides two variants:
@@ -35,19 +41,40 @@ The environment provides two variants:
 
 Each episode typically runs up to 1600 steps (normal) or 2000 steps (hardcore).
 
-\subsection{Goal}
+\subsubsection{Goal}
 The goal is to make the agent walk forward along the terrain as far as possible without falling.
+This is equivalent to maximize the cumulative reward:
 
-More formally, the objective is to maximize cumulative reward:
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\textbf{Reward function}
 \begin{itemize}
     \item Positive reward for forward displacement along the x-axis
-    \item Large penalty (approximately -100) for falling
-    \item Small penalties for applying motor torque (energy cost)
+    \item Large penalty ($-100$) for falling
+    \item Small penalties for applying motor torque
 \end{itemize}
-
-An episode terminates when:
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\textbf{Episode termination}
 \begin{itemize}
-    \item The robot falls (torso contacts ground), or
-    \item The end of the terrain is reached, or
-    \item (The time limit is exceeded)
+    \item The robot falls (torso contacts the ground)
+    \item The end of the terrain is reached
+    \item The time limit is exceeded
 \end{itemize}
+\end{minipage}
+
+\subsection{CartPole}
+
+The CartPole problem from Gymnasium deals with balancing a inverted pendelum on a cart.
+
+\subsubsection{Agent}
+
+The agent controls the cart by choosing one of two discrete actions
+corresponding to applying a fixed force to the left or right.
+
+The observation consists of four continuous values: Cart position, Cart velocity, Pole angle, Pole angular velocity
+
+\subsubsection{Goal}
+
+The objective is to keep the pole balanced for at least 500 steps. The agent receives a reward of +1 for every time step the pole remains upright. An episode terminates when either (a) the pole angle exceeds the allowed limit, (b) the cart moves outside the permitted range, or (c) The maximum episode length (500) is reached.

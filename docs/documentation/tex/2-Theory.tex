@@ -1,206 +1,95 @@
 \section{Theory}
-
-\subsection{Deep Neural Networks}
-
-Deep Neural Networks (DNNs) consist of an input layer, multiple hidden layers, and an output layer. Each 
-layer contains nodes (neurons) connected to the next layer by weights $\theta$ and biases, which are 
-updated during training to minimize a loss function.
-
-\subsubsection{Universal Function Approximators}
-
-A feedforward network with at least one hidden layer and a non-linear activation function can approximate 
-any continuous function to arbitrary precision, given sufficient capacity (width). 
-
-\subsubsection{Hierarchical Feature Representation}
-
-As data passes through a deep network, each successive layer extracts increasingly abstract features. 
-This essentially can be considered as automatic feature engineering. (=extracting critical components 
-required for decision-making) It facilitates compression and therefore generalization.
-
-\subsubsection{Scaling and Performance}
-
-Increasing a networks width or its depth, increases its capacity to represent complex functions. While deeper 
-networks are generally more parameter-efficient than wide, shallow ones, they are also harder to train. 
+The exposition below follows the treatment in [4], supplemented with the primary DQN and Double DQN papers [1, 2] for the algorithmic details specific to this project.
 
 \subsection{Reinforcement Learning}
 
-Reinforcement Learning is a type of Machine Learning where the agent learns by trial and error 
-to optimize its behaviour for a return heuristic, as opposed to being trained on labeled examples. 
-\\
-\\
-The return heuristic is calculated over episodes, which are sequences of interactions between agent and 
-given environment, subject to evaluation. In RL episodes is modelled by Markov Decision Processes. 
-We call specific realizations of episodes trajectories.
+Reinforcement Learning is a type of Machine Learning where the agent learns by trial and error to optimize its behaviour for a return heuristic, as opposed to being trained on labeled examples. In Deep RL, the value functions below are approximated by a Deep Neural Network (DNN) — a universal function approximator that also performs automatic feature engineering — rather than a lookup table, which is what lets the methods described here scale to continuous or high-dimensional state spaces.
 
-\subsubsection{Markov Decision Process - MDP}
+The return heuristic is calculated over episodes, sequences of interactions between agent and environment. In RL, episodes are modelled by Markov Decision Processes (MDPs); we call specific realizations of episodes trajectories.
 
-The MDP is a sequence of states $s_i$, actions $a_i$ and rewards $r_i$
+\subsubsection{Markov Decision Process (MDP)}
 
+An MDP is a sequence of states $s_i$, actions $a_i$ and rewards $r_i$,
 \[
 s_1, a_1, r_1, s_2, a_2, r_2, s_3, a_3, r_3, \dots
 \]
-
-where each action $a_i$ is taken (in some way) based on the state $s_i$, results in a state transition 
-$s_i \rightarrow s_{i+1}$ (controlled by the environment) and the reward $r_i$ (comes from environment).
-
-In particular the MDP must follow Markov's Property
-
-\paragraph{Markov's Property}
-Observations are markovian if each subsequent state solely depends on the previous state and an action 
-or in other words, the previous state and taken action are sufficient to determine the subsequent state. 
+where each action $a_i$, taken based on state $s_i$, results in a state transition $s_i \rightarrow s_{i+1}$ and reward $r_i$ (both controlled by the environment). This process must satisfy the \textbf{Markov property}: the next state depends only on the current state and action, not on the full history,
 \[
-P(s_{t+1} | s_t, a_t) = P(s_{t+1} | s_t, a_t, s_{t-1}, a_{t-1}, \dots, s_0, a_0)
+P(s_{t+1} | s_t, a_t) = P(s_{t+1} | s_t, a_t, s_{t-1}, a_{t-1}, \dots, s_0, a_0).
 \]
 
-\subsubsection{Return $G_t$}
+\subsubsection{Return and Policy}
 
-The return at $(s_t, a_t)$ is a function of the subsequent rewards: 
-
-\[
-    G_t = G_t(r_t, r_{t+1}, \dots)
-\]
-
-For example it can be defined as discounted sum of future rewards $G_t = \sum_{k=0}^{\infty} \gamma^k r_{t+k+1}$
-, with $\gamma \in [0, 1]$.
-
-\subsubsection{Policy $\pi(a_i|s_i)$}
-
-The models objective is to learn of a policy $\pi(a_i|s_i)$, which for each $(s_t, a_t)$ picks an 
-action such the respective expected return is maximized. (Environment may be stochastic)
-
-\subsubsection{World Models}
-
-The environment's internal mechanics are defined by the transition dynamics $P(s_{t+1}|s_t, a_t)$ 
-and the reward function $R(s_t, a_t)$. Together, these are known as the World Model.
-
-\begin{itemize}
-    \item \textbf{Model-Free RL:} No access to transition and reward functions. Agent learns strictly from experience.
-    \item \textbf{Model-Based RL:} Agent learns or is given a World Model. Thus it is able to simulate future trajectories without interacting with the environment (=planning).
-\end{itemize}
+The return $G_t$ is a function of subsequent rewards, e.g.\ the discounted sum $G_t = \sum_{k=0}^{\infty} \gamma^k r_{t+k+1}$ with $\gamma \in [0, 1]$. The agent's objective is to learn a policy $\pi(a_t|s_t)$ that, for each state, picks the action maximizing the expected return (the environment may be stochastic).
 
 \subsubsection{Value Functions}
 
-To solve an MDP, the agent must estimate the "goodness" of being in a particular state or taking 
-a particular action. This can be formalized with value functions, which estimate the expected return.
-
-\paragraph{State-Value Function $V^\pi(s)$}
-
+To solve an MDP, the agent estimates the "goodness" of a state or state-action pair via value functions, which estimate expected return:
 \begin{equation}
-V^\pi(s) = \mathbb{E}_\pi [G_t | s_t = s]
+V^\pi(s) = \mathbb{E}_\pi [G_t | s_t = s], \qquad Q^\pi(s, a) = \mathbb{E}_\pi [G_t | s_t = s, a_t = a].
 \end{equation}
-
-\paragraph{Action-Value Function (Q-Function) $Q^\pi(s, a)$}
-
-\begin{equation}
-Q^\pi(s, a) = \mathbb{E}_\pi [G_t | s_t = s, a_t = a]
-\end{equation}
-
-\paragraph{Optimal Value Functions $V^*$ and $Q^*$}
-\begin{equation}
-Q^*(s, a) = \max_\pi Q^\pi(s, a)
-\end{equation}
-and $V^*$ analogously.
-\\
-For Value-Based methods like DQN, the Q-function is the primary focus as it allows the agent 
-to rank actions without needing a model of the environment's transitions. 
-Optimal Value Functions resemble the "goal" of RL- They represent the maximum expected 
-return achievable by any policy: If an agent learns $Q^*$, it can derive the optimal policy 
-by simply selecting the action that maximizes the Q-value in any given state: $\pi^*(s) = \arg\max_a Q^*(s, a)$.
+The optimal action-value function $Q^*(s, a) = \max_\pi Q^\pi(s, a)$ ($V^*$ analogously) represents the maximum expected return achievable by any policy; once $Q^*$ is known, the optimal policy follows directly as $\pi^*(s) = \arg\max_a Q^*(s, a)$. For Value-Based methods like DQN, $Q^*$ is the primary target, since it lets the agent rank actions without needing a model of the environment's transitions.
 
 \subsubsection{Bellman Equation}
-Value functions can be decomposed into a recursive (=Bellman Equation). It expresses the 
-relationship between the value of a state (or state-action pair) and the value of its successor states.
-For $Q^*$, the Bellman optimality equation is given by:
+Value functions decompose recursively via the Bellman equation, which relates the value of a state(-action) pair to the value of its successors. For $Q^*$, the Bellman optimality equation is
 \begin{equation}
-    Q^*(s, a) = \mathbb{E} [r_{t+1} + \gamma \max_{a'} Q^*(s_{t+1}, a') | s_t=s, a_t=a]
+    Q^*(s, a) = \mathbb{E} [r_{t+1} + \gamma \max_{a'} Q^*(s_{t+1}, a') | s_t=s, a_t=a],
 \end{equation}
-This equation is the foundation of the DQN algorithm, as it provides a way to iteratively 
-update the estimate of $Q^*$ based on immediate rewards and the predicted future value.
+which is the foundation of the DQN algorithm, as it provides an iterative target for updating an estimate of $Q^*$ from immediate rewards and predicted future value.
 
-\subsubsection{Learning Methods}
-There are two primary ways an agent can learn to estimate the value functions from 
-experience: Monte Carlo methods and Temporal Difference learning.
-
-\paragraph{Monte Carlo (MC) Methods}
-Monte Carlo methods learn from complete episodes. The agent interacts with the environment 
-until a terminal state is reached, calculates the total return $G_t$, and then updates the value 
-of the states visited. While MC is unbiased, it requires the task to be episodic and can suffer 
-from high variance.
-
-\paragraph{Temporal Difference (TD) Learning}
-TD learning combines ideas from Monte Carlo and Dynamic Programming. Unlike MC, TD methods 
-can learn from incomplete sequences by "bootstrapping" a guess based on another guess. 
-
-In TD(0), the simplest form of TD learning, the update target for a state $s$ is the immediate 
-reward plus the discounted value of the next state:
+\subsubsection{Temporal Difference Learning}
+Temporal Difference (TD) learning updates value estimates from incomplete sequences by "bootstrapping" a guess from another guess, rather than waiting for a full episode's return as Monte Carlo methods do. In TD(0), the update target for a state $s$ is the immediate reward plus the discounted value of the next state:
 \begin{equation}
-    Target = r_{t+1} + \gamma V(s_{t+1})
+    Target = r_{t+1} + \gamma V(s_{t+1}).
 \end{equation}
-
-DQN utilizes TD learning, as it updates its Q-network at every time step using 
-the transition $(s, a, r, s')$, making it significantly more sample-efficient than Monte Carlo approaches.
+DQN uses TD learning, updating its Q-network at every time step from a single transition $(s, a, r, s')$, which makes it far more sample-efficient than Monte Carlo approaches.
 
 \subsection{Deep Q-Networks (DQN)}
 
-Deep Q-Networks represent the fusion of the above. On the comparative to non-neural (tabular) RL, DQN win, 
-because they are able to compress information (through generalization), whereas tabular RL would have to 
-store all transitions in a LUT. This equivalently means that DQNs are suitable for continous state spaces, 
-since they can estimate $Q(s, a; \theta) \approx Q^*(s, a)$, allowing to act correctly on previously unseen 
-information. Tabular RL would simply fail due to lack of lookup values.
-\\
-\\
-One major pitfall of DQN (but also tabular RL), is that despite accepting continuous state spaces, their outputs 
-are discrete. In applications like robotics this can lead to jitter and lack of fine grained porecision.
+DQN estimates $Q^*$ with the DNN introduced above, $Q(s, a; \theta) \approx Q^*(s, a)$, letting it generalize to states not seen during training rather than requiring a lookup table (LUT) entry for every transition as tabular RL would — making DQN suitable for continuous state spaces. Its action space, however, remains discrete, which can cause jitter and a lack of fine-grained precision in applications like robotics; Section~\ref{sec:implementation} addresses this constraint for BipedalWalker via an explicit discretization scheme.
 
 \subsubsection{DQN Objective and Training}
-DQN is a Value-Based, Model-Free algorithm that utilizes Temporal Difference learning. The network is trained by minimizing a loss function derived from the Bellman optimality equation. At each iteration $i$, the Mean Squared Error (MSE) of the TD error is minimized:
+DQN is a Value-Based, Model-Free algorithm that uses TD learning. The network is trained by minimizing the Mean Squared Error (MSE) of the TD error derived from the Bellman optimality equation:
 \begin{equation}
-    L_i(\theta_i) = \mathbb{E} \left[ \left( \underbrace{r + \gamma \max_{a'} Q(s', a'; \theta_i^-)}_{\text{TD Target}} - Q(s, a; \theta_i) \right)^2 \right]
+    L_i(\theta_i) = \mathbb{E} \left[ \left( \underbrace{r + \gamma \max_{a'} Q(s', a'; \theta_i^-)}_{\text{TD Target}} - Q(s, a; \theta_i) \right)^2 \right],
 \end{equation}
-Where $\theta_i^-$ represents the parameters of a "Target Network," a periodic snapshot of the weights used to stabilize training.
+where $\theta_i^-$ represents the parameters of a \textbf{Target Network}, a periodic snapshot of the weights used to stabilize training (see below).
 
 \subsubsection{Action Selection and Exploration}
-Since the agent in DQN learns from its own experiences, it faces the \textit{exploration-exploitation} dilemma. Occasionally it is reasonable, to take sub-optimal actions to discover better long-term strategies, in order to learn action-value function.
+Because DQN learns from its own experience, it faces the \textit{exploration-exploitation} dilemma: occasionally taking sub-optimal actions is necessary to discover better long-term strategies and learn an accurate action-value function.
 
 \paragraph{Greedy Policy}
-A strictly greedy policy always selects the action with the highest estimated value: $a = \arg\max_{a'} Q(s, a')$. This maximizes immediate reward, but prevents the agent from discovering better actions (lack of exploration).
+A strictly greedy policy always selects the action with the highest estimated value: $a = \arg\max_{a'} Q(s, a')$. This maximizes immediate reward but prevents the agent from discovering better actions.
 
 \paragraph{Epsilon-Greedy ($\epsilon$-greedy)}
-In this standard approach, the agent selects a random action with probability $\epsilon$ and the greedy action with probability $1-\epsilon$. Often, $\epsilon$ is annealed (decreased) over time, moving from high exploration to high exploitation as the agent's confidence in its Q-estimates grows.
+The agent selects a random action with probability $\epsilon$ and the greedy action with probability $1-\epsilon$. Often $\epsilon$ is annealed (decreased) over time, moving from high exploration to high exploitation as the agent's confidence in its Q-estimates grows.
 
 \paragraph{Boltzmann (Softmax) Exploration}
-Instead of choosing purely at random, Boltzmann exploration assigns a probability to each action based on its Q-value using a temperature parameter $\tau$:
+Instead of choosing purely at random, Boltzmann exploration assigns each action a probability based on its Q-value using a temperature parameter $\tau$:
 \begin{equation}
-    P(a|s) = \frac{e^{Q(s, a)/\tau}}{\sum_{a'} e^{Q(s, a')/\tau}}
+    P(a|s) = \frac{e^{Q(s, a)/\tau}}{\sum_{a'} e^{Q(s, a')/\tau}}.
 \end{equation}
 This ensures that actions with higher estimated values are explored more frequently than those with very low values.
 
 \subsubsection{Experience Replay Buffer}
-A core challenge in using DNNs for RL is that sequential samples in a trajectory are highly correlated, violating the \textit{i.i.d.} assumption required for stable gradient descent. Furthermore, the agent might "forget" rare but important experiences once it moves to a different part of the state space.
-
-To address this, DQN utilizes an \textbf{Experience Replay Buffer} $\mathcal{D}$. 
-\begin{enumerate}
-    \item During interaction, agent stores transitions $e_t = (s_t, a_t, r_{t+1}, s_{t+1})$ in $\mathcal{D}$.
-    \item During training, instead of picking most recent transition, agent samples a "mini-batch" of experiences uniformly at random from the buffer.
-\end{enumerate}
-
-This mechanism breaks the temporal correlation of data. It allows the network to learn from each experience multiple times, significantly improving sample efficiency and numerical stability.
+Sequential samples within a trajectory are highly correlated, violating the \textit{i.i.d.} assumption required for stable gradient descent; the agent may also "forget" rare but important experiences once it moves to a different part of the state space. DQN addresses this with an \textbf{Experience Replay Buffer} $\mathcal{D}$: during interaction, transitions $e_t = (s_t, a_t, r_{t+1}, s_{t+1})$ are stored in $\mathcal{D}$, and during training a mini-batch is sampled uniformly at random from $\mathcal{D}$ rather than using only the most recent transition. This breaks temporal correlation in the data and lets the network learn from each experience multiple times, improving sample efficiency and numerical stability.
 
 \subsubsection{Target Networks and the Moving Target Problem}
-A significant reason for instability in Deep Q-Learning arises from the same network parameters $\theta$ beeing used to calculate both the current estimate $Q(s, a; \theta)$ and the TD target. Because the target depends on the network's own predictions:
+Using the same parameters $\theta$ for both the current estimate $Q(s, a; \theta)$ and the TD target creates a feedback loop: because
 \begin{equation}
     Target = r + \gamma \max_{a'} Q(s', a'; \theta)
 \end{equation}
-any update to $\theta$ that reduces the error for the current state also changes the target for the next state. This creates a feedback loop where the "ground truth" the network is trying to learn is constantly shifting, leading to oscillations or divergence.
+depends on the network's own predictions, any update that reduces the current error also shifts the target for the next state — the "ground truth" the network is trying to learn keeps moving, leading to oscillation or divergence.
 
-To solve this \textit{moving target problem}, DQN introduces a second neural network called the \textbf{Target Network}, with its own parameters $\theta^-$. 
-
-\paragraph{Mechanism}
-The target network is an identical copy of the online (policy) network but its weights are "frozen." Its exclusive use is to calculate the TD target:
+DQN solves this \textit{moving target problem} with a second, "frozen" \textbf{Target Network} with its own parameters $\theta^-$, used exclusively to compute the TD target:
 \begin{equation}
-    y^{DQN} = r + \gamma \max_{a'} Q(s', a'; \theta^-)
+    y^{DQN} = r + \gamma \max_{a'} Q(s', a'; \theta^-).
 \end{equation}
-The online network $\theta$ is updated at every training step, while the target network $\theta^-$ remains stationary. Periodically (every $C$ steps), the parameters of the online network are copied to the target network: $\theta^- \leftarrow \theta$.
+The online network $\theta$ is updated at every training step, while $\theta^-$ is only periodically synced (every $C$ steps, $\theta^- \leftarrow \theta$). Keeping the target fixed between syncs temporarily reduces the problem to supervised learning with a stable objective, decoupling weight updates from target calculation and reducing oscillation.
 
-\paragraph{Advantage}
-By keeping the target fixed for a substantial number of iterations, the reinforcement learning problem is temporarily reduced to a supervised learning task with a stable objective. This means that wieght updates are decoupled from target calculation, which reduces oscillations and instability.
+\subsubsection{Double DQN (DDQN)}
+Target networks stabilize training, but standard DQN still suffers a systematic \textit{overestimation bias}: the same network $\theta^-$ both \textit{selects} the greedy action (via $\arg\max$) and \textit{evaluates} it, and because selection uses noisy estimates, actions that are overestimated by chance are more likely to be picked. Double DQN (DDQN) mitigates this by decoupling selection from evaluation — the online network $\theta$ selects the greedy action, while the target network $\theta^-$ evaluates it:
+\begin{equation}
+    y^{DoubleDQN} = r + \gamma \, Q\big(s', \arg\max_{a'} Q(s', a'; \theta); \theta^-\big).
+\end{equation}
+Since the two networks are trained on different samples, they are unlikely to overestimate the same action simultaneously, reducing the upward bias — at no cost in additional networks, hyperparameters, or meaningful compute overhead.

@@ -1,16 +1,19 @@
 \section{Implementation}
+\label{sec:implementation}
+
+The agent is implemented as a modular Python package (\texttt{src/dqn/}) whose components map cleanly onto the standard DQN algorithm. Figure~\ref{fig:arch} gives an overview.
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=\columnwidth, inkscapelatex=false]{img/dqn-system-architecture.svg}
+    \includegraphics[
+        width=0.45\textwidth
+    ]{img/dqn-system-architecture.pdf}
     \caption{Architecture Diagram}
     \label{fig:arch}
 \end{figure}
 
-The agent is implemented as a modular Python package (\texttt{src/dqn/}) whose components map cleanly onto the standard DQN algorithm. Figure~\ref{fig:arch} gives an overview.
-
 \subsection{Configuration}
-All hyperparameters are declared in \texttt{DQNConfig} (\texttt{dqn/config.py}), a typed dataclass whose field names match JSON config file keys one-to-one. At runtime, \texttt{DQNConfig.load} resolves a base JSON file (per environment) and applies any CLI overrides, ensuring a single source of truth for every tunable parameter.
+All hyperparameters are declared in \texttt{DQNConfig} \newline (dqn/config.py), a typed dataclass whose field names match JSON config file keys one-to-one. At runtime, (DQNConfig.load) resolves a base JSON file (per environment) and applies any CLI overrides, ensuring a single source of truth for every tunable parameter.
 
 \subsection{Policy}
 Action selection is handled by the \texttt{BasePolicy} abstract class (\texttt{dqn/policies/}), from which three concrete strategies inherit:
@@ -25,16 +28,16 @@ Each policy owns its Q-network and performs a non-blocking host-to-device copy t
 \texttt{ExperienceReplay} (\texttt{dqn/memory.py}) implements a standard ring buffer backed by pre-allocated NumPy arrays. Transitions $(s, a, r, s', d)$ are stored as contiguous blocks; when the buffer wraps around its capacity $N$ older experiences are overwritten. Sampling uses asynchronous \texttt{Tensor.copy\_} calls to overlap GPU transfer with CPU work.
 
 \subsection{Learner}
-\texttt{DQNLearner} (\texttt{dqn/learner.py}) maintains a \emph{policy network} $Q_\theta$ and a \emph{target network} $Q_{\theta^-}$ (a periodically updated copy). It implements Double DQN \cite{hasselt2016deep}: the policy network selects the greedy action in the next state, while the target network evaluates it:
+\texttt{DQNLearner} (\texttt{dqn/learner.py}) maintains a \emph{policy network} $Q_\theta$ and a \emph{target network} $Q_{\theta^-}$ (a periodically updated copy). It implements Double DQN: the policy network selects the greedy action in the next state, while the target network evaluates it:
 
 \begin{equation}
     y_t = r_t + \gamma \, Q_{\theta^-}\!\left(s_{t+1},\, \arg\max_{a'} Q_\theta(s_{t+1}, a')\right)(1 - d_t)
 \end{equation}
 
-Parameters are updated via Adam with the Huber (Smooth-$L_1$) loss between $Q_\theta(s_t, a_t)$ and $y_t$. The target network is synchronized every \texttt{target\_sync\_interval} epochs; hard copies ($\tau = 1$) are used by default, with optional Polyak averaging for $\tau < 1$.
+Parameters are updated via Adam with the Huber (Smooth-$L_1$) loss between $Q_\theta(s_t, a_t)$ and $y_t$. The target network is synchronized every \newline \texttt{target\_sync\_interval} epochs; hard copies ($\tau = 1$) are used by default, with optional Polyak averaging for $\tau < 1$.
 
 \subsection{Neural Networks}
-The Q-function is approximated by a feedforward MLP (\texttt{dqn/networks/feedforward.py}) with ReLU activations. Three sizes are registered in \texttt{NetworkFactory}:
+The Q-function is approximated by a feedforward MLP (\texttt{dqn/networks/feedforward.py}) with ReLU activations. Three sizes are registered in \newline \texttt{NetworkFactory}:
 
 \begin{center}
 \begin{tabular}{ll}
@@ -54,11 +57,35 @@ Input is the 24-dimensional observation vector; output is a Q-value per discrete
 \texttt{DQNAgent.train} (\texttt{dqn/dqn\_agent.py}) orchestrates the following phases each epoch:
 \begin{enumerate}
     \item \textbf{Warmup} — random actions fill the replay buffer for \texttt{warmup\_steps} steps before any gradient updates occur.
-    \item \textbf{Collection} — the current policy interacts with \texttt{num\_envs} parallel environments for \texttt{steps\_per\_epoch} steps, storing transitions in the buffer.
+    \item \textbf{Collection} — the current policy interacts with \texttt{num\_envs} parallel environments for \newline \texttt{steps\_per\_epoch} steps, storing transitions in the buffer.
     \item \textbf{Optimization} — \texttt{updates\_per\_epoch} mini-batches of size \texttt{batch\_size} are sampled and used for gradient steps.
     \item \textbf{Target sync} — the target network is updated every \texttt{target\_sync\_interval} epochs.
 \end{enumerate}
+
 Exploration is annealed as a function of \texttt{current\_step / total\_steps} via the shared \texttt{linear\_anneal} utility (\texttt{dqn/logic.py}). Metrics (loss, mean episode reward, mean episode length) are logged per epoch to MLflow via \texttt{MetricsTracker}.
 
 \subsection{Action Space Discretisation}
-Since DQN requires a discrete action space and BipedalWalker-v3 natively exposes a continuous $[-1,1]^4$ action space, a wrapper (\texttt{env/bipedal\_wrapper.py}) maps a finite set of motor-speed combinations to integer indices. The discretisation scheme is described in Section~\ref{sec:bipedal-wrapper}.
+
+Since DQN requires a discrete action space and BipedalWalker-v3 natively exposes a continuous $[-1,1]^4$ action space, a wrapper (\texttt{env/bipedal\_wrapper.py}, \texttt{DiscreteBipedalWrapper}) maps a finite set of motor-speed combinations to integer indices. The discretization scheme is \emph{bang-bang} control:
+
+\begin{equation}
+    \mathcal{A}_{\text{disc}} = \{-1.0, +1.0\}^4, \qquad |\mathcal{A}_{\text{disc}}| = 2^4 = 16.
+\end{equation}
+
+At runtime, an integer action $a \in \{0, \dots, 15\}$ is mapped to its corresponding 4-tuple of joint torques; the inverse mapping is computed via nearest-neighbour search in Euclidean distance over the 16 candidate vectors. 
+\\
+While bang-bang control forgoes fine-grained torque modulation, it keeps the action space small enough for a plain feedforward Q-network to search exhaustively at every decision step.
+
+\subsection{BipedalWalker Reward Shaping}
+
+The unmodified reward, combined with coarse bang-bang discretization above, facilitates a loophole: gaining forward velocity by dragging on a single leg. \texttt{DiscreteBipedalWrapper.step} counters this by re-shaping every reward: the raw $-100$ fall penalty is clipped to $-5.0$; a posture penalty ($-2.0 \cdot |\text{hull angle}|$) and a stabilization penalty ($-0.5 \cdot (|\text{angular vel.}| + |\text{vertical vel.}|)$) discourage tilt and bouncing; forward motion is rewarded per step ($5.0 \cdot v_x$, or $-0.3$ if $v_x \le 0$) rather than only cumulatively; and per-leg ground-contact duration (a raw step counter beyond 15 steps, and an EMA with $\alpha = 0.08$ exceeding $0.75$) is penalized to suppress asymmetric skating specifically. These terms only affect the learning signal; the unmodified Gymnasium return remains the value reported as the evaluation metric.
+
+\subsection{CartPole Specifics}
+CartPole-v1 already exposes a discrete 2-action space, so \texttt{DiscreteBipedalWrapper} and reward shaping are not applied; the agent interacts with the unmodified Gymnasium environment. CartPole additionally uses a smaller default network (\texttt{mlp\_small}), a smaller replay buffer, and a much shorter warmup and training budget than BipedalWalker (see \texttt{configs/cartpole.json} vs. \texttt{configs/bipedalwalker.json}), reflecting the lower dimensionality of its observation and action spaces.
+
+\subsection{Software Stack and Compute Resources}
+\label{sec:compute}
+The framework is implemented in Python ($\geq 3.11$) on top of Gymnasium (environments), PyTorch (networks and optimization), MLflow (experiment tracking), and NumPy/pandas/Matplotlib (buffers and result plotting); dependencies are pinned and installed via the \texttt{uv} package manager (see \texttt{pyproject.toml}).
+
+Because the Q-network is a small MLP (at most \texttt{mlp\_large}) operating on low-dimensional observations with replay buffers of at most $500{,}000$ transitions, a single run needs only on the order of $2$\,GB of RAM/GPU memory and runs equally well on CPU or CUDA (\texttt{--device} flag). All 25 reported configurations (15 BipedalWalker, 10 CartPole; Section~\ref{sec:evaluation}) were trained on personal machines ranging from CPU-only laptops to a single consumer-grade NVIDIA RTX 2070 SUPER GPU, with no shared cluster or cloud compute;
+

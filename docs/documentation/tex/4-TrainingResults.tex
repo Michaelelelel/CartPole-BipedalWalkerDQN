@@ -1,3 +1,141 @@
-\section{Training}
+\section{Evaluation, Results and Discussion}
+\label{sec:evaluation}
 
-\section{Results}
+\subsection{Evaluation Setup}
+Following training, each selected DQN configuration was evaluated using a purely \emph{greedy} policy. Exploration mechanisms ($\epsilon$-greedy or Boltzmann sampling) were disabled during evaluation to measure the intrinsic quality of the learned policy rather than exploratory behavior. Evaluation episodes therefore only carry stochasticity from the environment itself (random initial state), not from the action-selection rule.
+
+For each BipedalWalker configuration, 50 evaluation episodes were run; for each CartPole configuration, 100 evaluation episodes were run. The primary evaluation metric is the \textit{cumulative episode return}; \textit{episode length} serves as a supporting survival metric. For every run we recorded the mean, standard deviation, median, minimum, maximum, and best observed return.
+
+\subsection{BipedalWalker: Overall Ranking}
+Table~\ref{tab:overall-ranking} summarizes the five best-performing BipedalWalker configurations. The best configuration, \texttt{bw\_boltzmann\_final\_01\_seed42}, achieved a mean return of $329.16 \pm 49.99$, clearly ahead of every other candidate.
+
+\begin{table*}[!ht]
+    \centering
+    \small
+    \caption{BipedalWalker: Top 5 Configurations by Mean Return}
+    \label{tab:overall-ranking}
+
+    \begin{tabularx}{\textwidth}{rXlrrrrr}
+        \toprule
+        Rank & Configuration & Policy & Mean Ret. & Std. & Median & Best & Mean Len. \\
+        \midrule
+        \textbf{1} & \texttt{bw\_boltzmann\_final\_01} & Boltzmann & \textbf{329.16} & 49.99 & 321.32 & 513.25 & 143.38 \\
+        2 & \texttt{bw\_final\_02\_balanced} & $\epsilon$-greedy & 243.00 & 50.80 & 229.60 & 413.00 & 132.00 \\
+        3 & \texttt{bw\_03\_more\_exploration} & $\epsilon$-greedy & 163.71 & 12.57 & 164.61 & 189.30 & 89.52 \\
+        4 & \texttt{bw\_boltzmann\_04\_more} & Boltzmann & 160.57 & 14.96 & 159.09 & 195.71 & 88.98 \\
+        5 & \texttt{bw\_01\_baseline\_large} & $\epsilon$-greedy & 158.65 & 16.78 & 154.96 & 203.43 & 89.10 \\
+        \bottomrule
+    \end{tabularx}
+\end{table*}
+
+The final Boltzmann configuration outperforms the best $\epsilon$-greedy configuration (rank 2) by $+86.16$ mean return, an improvement of approximately $35\%$. Notably, that runner-up itself already more than doubles the return of the third-ranked configuration, but does so with a standard deviation ($50.80$) almost as large as the top Boltzmann run's — the two strongest configurations overall are also the two most volatile ones.
+
+\subsection{BipedalWalker: Main Findings}
+
+\paragraph{1. Superiority of the Final Boltzmann Configuration}
+
+The model \texttt{bw\_boltzmann\_final\_01\_seed42} achieved a median return of $321.32$, with high score of $513.25$, confirming strong performance across the board rather than a few lucky episodes. This run used the parameters in Table~\ref{tab:best_params}; Figure~\ref{fig:bw-success} in the Appendix shows its training curves.
+
+\begin{table}[!ht]
+    \centering
+    \footnotesize
+    \caption{Hyperparameters for the Best BipedalWalker Run}
+    \label{tab:best_params}
+    \begin{tabular}{lr | lr}
+        \toprule
+        Parameter & Value & Parameter & Value \\
+        \midrule
+        Policy & Boltzmann & Replay Buffer & 500,000 \\
+        Network & \texttt{mlp\_large} & Batch Size & 256 \\
+        Learning Rate & $0.00005$ & Warmup Steps & 50,000 \\
+        Gamma ($\gamma$) & 0.99 & Total Epochs & 500 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{2. Boltzmann Exploration Efficacy}
+Earlier Boltzmann attempts performed near or below the $\epsilon$-greedy baseline (e.g., \texttt{bw\_06\_boltzmann\_large\_300} at $145.10$ vs. baseline at $158.65$), and extensive tuning was required before Boltzmann exploration broke away from the pack. This indicates that the exploration strategy is highly sensitive to boundary factors, rather than being unconditionally superior to $\epsilon$-greedy.
+
+\paragraph{3. High Return Comes with High Variance, Independent of Exploration Strategy}
+The two strongest configurations overall both show substantially higher run-to-run variance than the more conservative configurations ranked 3--5. This suggests that in this setup, pushing the return ceiling higher (through a longer training budget, lower learning rate, and a larger replay buffer) comes at the cost of a wider spread of outcomes, regardless of whether Boltzmann or $\epsilon$-greedy exploration is used.
+
+\paragraph{4. Benefits of Increased Exploration}
+Increasing the final exploration value ($\epsilon_{\text{end}}$) from $0.05$ to $0.10$ in the $\epsilon$-greedy setup (\texttt{bw\_03}) improved the mean return from $158.65$ to $163.71$. Stronger exploration likely prevented premature convergence on inefficient gaits.
+
+\paragraph{5. Conservatism of Low Learning Rates}
+Reducing the learning rate from $0.0003$ to $0.0001$ in isolation (\texttt{bw\_02}) decreased performance to $141.3$. While the best model used an even lower rate ($0.00005$), it was paired with a larger batch size and buffer, suggesting that low learning rates require a corresponding increase in sample diversity to be effective.
+
+\paragraph{6. Architectural Capacity}
+The \texttt{mlp\_large} architecture significantly outperformed \texttt{mlp\_medium} ($158.65$ vs. $132.8$). Given the complexity of BipedalWalker environment, the higher representational capacity of the larger network seems necessary for good Q-function approximation.
+
+\paragraph{7. Sensitivity to Temporal Discounting}
+Reducing the discount factor $\gamma$ to $0.97$ (\texttt{bw\_07}) caused the most severe performance drop of any single-parameter ablation ($93.41 \pm 33.83$). This is probably due to walking requiring planning.
+
+\subsection{BipedalWalker vs. BipedalWalker Hardcore}
+
+As an additional, exploratory check, the best BipedalWalker configuration's hyperparameters (Table~\ref{tab:best_params}) were reused without re-tuning on the harder \texttt{BipedalWalkerHardcore-v3} variant. Figure~\ref{fig:hardcore} in the Appendix compares training curves between the two variants. Unlike on the default terrain, episode length does not increase over training on Hardcore, indicating that the agent fails to learn a viable strategy for traversing the added obstacles. This is expected: the discretized bang-bang action space and purely reactive MLP policy provide no explicit mechanism for anticipating obstacles. This experiment is therefore reported only qualitatively.
+
+\subsection{CartPole Evaluation}
+For comparison, and to test whether findings transfer to a much simpler control problem, ten additional configurations were trained and evaluated on CartPole-v1 (Table~\ref{tab:cartpole-ranking}). Two configurations — \texttt{cp\_policy\_epsilon\_greedy} (\texttt{mlp\_small}) and \texttt{cp\_arch\_large} (\texttt{mlp\_large}) — reach a perfect mean return of $500.00 \pm 0.00$, i.e., the pole is balanced for the full episode in every evaluation episode; Figure~\ref{fig:cp-success} in the Appendix shows the training curves of the former.
+
+\begin{table}[!ht]
+    \centering
+    \footnotesize
+    \caption{CartPole-v1: Top 5 Configurations, Ranked by Mean Return}
+    \label{tab:cartpole-ranking}
+    \begin{tabular}{rlllrr}
+        \toprule
+        Rank & Configuration & Network & LR & Mean Ret. & Std. \\
+        \midrule
+        \textbf{1} & \texttt{cp\_arch\_large} & \texttt{mlp\_large} & $10^{-3}$ & \textbf{500.00} & 0.00 \\
+        \textbf{1} & \texttt{cp\_policy\_epsilon\_greedy} & \texttt{mlp\_small} & $10^{-3}$ & \textbf{500.00} & 0.00 \\
+        3 & \texttt{cp\_explore\_conservative} & \texttt{mlp\_small} & $10^{-3}$ & 493.84 & 23.90 \\
+        4 & \texttt{cp\_gamma\_low} ($\gamma=0.80$) & \texttt{mlp\_small} & $10^{-3}$ & 371.79 & 154.39 \\
+        5 & \texttt{cp\_policy\_boltzmann} & \texttt{mlp\_small} & $10^{-3}$ & 249.36 & 56.50 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Small budgets suffice.} Both top configurations use the CartPole default budget (200 epochs, 1000 warmup steps, replay buffer of 10,000) — several orders of magnitude smaller than the BipedalWalker budget — and still solve the task perfectly, reflecting CartPole's much lower-dimensional observation and action space.
+
+\paragraph{Network capacity is not monotonic here.} Unlike BipedalWalker, where the largest network was consistently best, \texttt{mlp\_medium} performs far \emph{worse} ($93.21$) than both \texttt{mlp\_small} ($245.36$--$500.00$, depending on run) and \texttt{mlp\_large} ($500.00$) under otherwise identical hyperparameters. This is best read as a poor optimization outcome for that specific architecture/hyperparameter combination rather than evidence that capacity is irrelevant for CartPole, since the smallest and largest networks both learn a strong policy.
+
+\paragraph{Exploration schedule matters more than exploration strategy.} A conservative $\epsilon$-greedy schedule ($0.1 \to 0.05$) reaches $493.84$, close to the ceiling, while an aggressive schedule ($1.0 \to 0.01$) is both worse and far less stable ($206.74 \pm 68.16$): injecting large amounts of randomness destabilizes a task that CartPole's short horizon and dense reward do not need. Boltzmann exploration ($249.36 \pm 56.50$) underperforms the best $\epsilon$-greedy configurations here — the reverse of the ranking observed on BipedalWalker.
+
+\paragraph{Learning rate sensitivity is extreme.} Increasing the learning rate by one order of magnitude ($10^{-3} \to 10^{-2}$) collapses training almost completely ($26.84$), while decreasing it by an order of magnitude ($10^{-3} \to 10^{-4}$) merely slows convergence within the fixed epoch budget ($217.53$, low variance).
+
+\paragraph{Low discount factors increase variance rather than uniformly hurting return.} Lowering $\gamma$ from $0.99$ to $0.80$ does not collapse the mean return as drastically as on BipedalWalker ($371.79$ vs. $500.00$), but produces by far the highest variance of any CartPole configuration ($\pm 154.39$, min $89$, max $500$): the agent either balances the pole for the full episode or fails early, depending on the initial state, consistent with a myopic policy that cannot correct small early errors.
+
+\subsection{Comparative: CartPole vs. BipedalWalker}
+Table~\ref{tab:comparative} summarizes how the best-performing hyperparameters differ between the two environments. As an additional check, the BipedalWalker-tuned hyperparameters (Table~\ref{tab:best_params}) were also applied to CartPole; they do reach a return of $500$, but only after a training budget that is unnecessarily long and expensive compared to the CartPole-tuned configuration, confirming that hyperparameters do not transfer efficiently between problems of very different complexity.
+
+\begin{table}[!ht]
+    \centering
+    \footnotesize
+    \caption{Best-Performing Hyperparameters by Environment}
+    \label{tab:comparative}
+    \begin{tabular}{llll}
+        \toprule
+         & CartPole-v1 & BipedalWalker-v3 & Interpretation \\
+        \midrule
+        Learning rate & $10^{-3}$ & $5{\times}10^{-5}$ & BW has a rougher Q-landscape \\
+        Exploration & $\epsilon$-greedy & Boltzmann & CP needs stable Q-values \\
+        Network & \texttt{mlp\_small} & \texttt{mlp\_large} & BW needs more capacity \\
+        Replay buffer & 10,000 & 500,000 & BW needs more state diversity \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Intuitively, this also matches the fact that CartPole is solvable by simple classical controllers (e.g., PID), so a comparatively small, quickly-trained DQN configuration already suffices.
+
+\subsection{Limitations}
+\label{sec:limitations}
+\begin{enumerate}
+    \item Several ``final''/``balanced'' runs change multiple hyperparameters at once, so results should be read as configuration-level comparisons rather than strictly causal single-parameter studies.
+    \item Reported std./median/min/max capture per-episode variance for a \emph{fixed} trained model, not cross-seed variance, since most configurations used a single training seed. This matters: two CartPole configurations with identical hyperparameters and the same nominal seed (\texttt{cp\_arch\_small}, \texttt{cp\_policy\_epsilon\_greedy}) reached mean returns of $245.36$ and $500.00$ respectively — a fixed seed does not guarantee deterministic training here (likely vectorized-environment scheduling), so single-seed comparisons should be read cautiously.
+    \item The best BipedalWalker configuration also used a substantially larger training budget, confounding exploration strategy with additional compute.
+    \item The Hardcore comparison reuses the default variant's hyperparameters without dedicated tuning and is reported only qualitatively.
+\end{enumerate}
+
+\subsection{Conclusion}
+The DQN agent learned effective control policies on both environments. On BipedalWalker, tuned Boltzmann exploration with a large replay buffer, large batch size, and conservative learning rate reached the highest return ceiling, at the cost of higher run-to-run variance than more conservative $\epsilon$-greedy configurations. On CartPole, small networks and short budgets suffice, and hyperparameters tuned for one environment transfer poorly to the other — capacity, exploration strategy, and replay/batch sizing should track task complexity rather than being reused wholesale. The exploratory Hardcore results suggest the discretized, memoryless policy does not extend to obstacle-rich terrain without further work.
